@@ -3,6 +3,25 @@ import datetime
 import typing as t
 
 
+class BaseLike(BaseModel):
+    rating: int
+
+    class Config:
+        orm_mode = True
+
+
+class LikeCreate(BaseLike):
+    post_id: int
+    user_id: int
+
+
+class Like(LikeCreate):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
 class UserBase(BaseModel):
     email: str
     is_active: bool = True
@@ -18,6 +37,7 @@ class UserPublic(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class PostBase(BaseModel):
     user_id: int
@@ -40,6 +60,8 @@ class PostCreate(PostBase):
 class Post(PostCreate):
     id: int
     created: datetime.datetime
+    # rating_plus: int
+    # rating_minus: int
     user: UserPublic
 
     class Config:

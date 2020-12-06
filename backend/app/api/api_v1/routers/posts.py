@@ -10,6 +10,7 @@ from app.db.crud import (
     delete_user,
     edit_user,
     create_post,
+    update_post,
     get_post,
     get_posts,
     delete_post
@@ -47,7 +48,8 @@ async def post_details(
     Get specyfic post
     """
     print(post_id)
-    post, user = get_post(db, post_id)
+    post, user, *likes = get_post(db, post_id)
+    print(likes)
     return Post(
         id=post.id,
         title=post.title,
@@ -72,6 +74,7 @@ async def posts_details(
     Get specyfic post
     """
     posts = get_posts(db)
+    print(posts)
     return [Post(
         id=post.id,
         title=post.title,
@@ -80,7 +83,7 @@ async def posts_details(
         source_url=post.source_url,
         content=post.content,
         created=post.created.isoformat(),
-        user=user) for post, user in posts]
+        user=user) for post, user, *likes in posts]
 
 
 @r.delete(
@@ -99,7 +102,7 @@ async def post_delete(
     return delete_post(db, post_id, current_user)
 
 
-@r.post(
+@r.put(
     "/posts",
 )
 async def post_create(
@@ -117,9 +120,51 @@ async def post_create(
     image_content = await image.read()
     image_name = save_post_image(image.filename, image_content)
     post = PostCreate(
+        title=title,
         user_id=current_user.id,
         source_url=source_url,
         content=content,
         image_url=image_name,
     )
+    print(post)
     return create_post(db, post)
+
+
+@r.post(
+    "/posts/{post_id}",
+    response_model=Post,
+)
+async def post_update(
+    response: Response,
+    post_id: int,
+    db=Depends(get_db),
+    current_user=Depends(get_current_active_user),
+    source_url: t.Optional[str] = Form(None),
+    title: t.Optional[str] = Form(None),
+    content: t.Optional[str] = Form(None),
+    image: t.Optional[UploadFile] = File(None),
+):
+    """
+    Get all users
+    """
+    fields_to_update = {}
+    if title:
+        fields_to_update['title'] = title
+    if source_url:
+        fields_to_update['source_url'] = source_url
+    if content:
+        fields_to_update['content'] = content
+    if image:
+        image_content = await image.read()
+        image_name = save_post_image(image.filename, image_content)
+        fields_to_update['image_url'] = image_name
+    post, user = update_post(db, fields_to_update, post_id=post_id, user_id=current_user.id)
+    return Post(
+        id=post.id,
+        title=post.title,
+        user_id=post.user_id,
+        image_url=post.image_url,
+        source_url=post.source_url,
+        content=post.content,
+        created=post.created.isoformat(),
+        user=user)

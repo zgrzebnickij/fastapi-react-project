@@ -30,3 +30,16 @@ class Post(Base):
     source_url = Column(String)
     content = Column(String)
     created = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class Like(Base):
+    __tablename__ = "like"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    post_id = Column(Integer, ForeignKey('post.id'))
+    rating = Column(Integer, nullable=False)
+
+    def __repr__(self):
+        return "<Like(user_id='%s', post_id='%s', rating='%s')>" % (
+                                self.user_id, self.post_id, self.rating)
