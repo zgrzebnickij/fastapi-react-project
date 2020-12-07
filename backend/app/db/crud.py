@@ -68,8 +68,17 @@ def get_post(db: Session, post_id: int):
     return response
 
 
+def get_user_post_rating(db: Session, post_id: int, user_id: int):
+    db_like = db.query(models.Like.rating) \
+        .filter(models.Like.user_id == user_id and models.Like.post_id == post_id) \
+        .first()
+    if not db_like:
+        return 0
+    return db_like[0]
+
+
 def get_posts(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(
+    result =  db.query(
             models.Post,
             models.User,
             func.count(models.Like.rating).filter(models.Like.rating == 1).label('good'),
@@ -77,6 +86,8 @@ def get_posts(db: Session, skip: int = 0, limit: int = 100):
         ).join(models.User, models.User.id == models.Post.user_id) \
         .outerjoin(models.Like, models.Like.post_id == models.Post.id) \
         .group_by(models.User.id, models.Post.id).order_by(models.Post.created).offset(skip).limit(limit).all()
+    print(result)
+    return result
 
 
 def get_user(db: Session, user_id: int):

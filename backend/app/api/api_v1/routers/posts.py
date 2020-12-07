@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Form, File, UploadFile, Request
-from app.db.schemas import PostCreate, Post, User, PostBase
-import typing as t 
+from app.db.schemas import PostCreate, Post, User, PostBase, PostLike, PostWithLikes
+import typing as t
 
 from app.db.session import get_db
 from app.db.crud import (
@@ -13,7 +13,8 @@ from app.db.crud import (
     update_post,
     get_post,
     get_posts,
-    delete_post
+    delete_post,
+    get_user_post_rating
 )
 from app.core.auth import get_current_active_user
 
@@ -36,9 +37,9 @@ def save_post_image(filename, image):
 
 @r.get(
     "/posts/{post_id}",
-    response_model=Post,
+    response_model=PostWithLikes
 )
-async def post_details(
+async def post_detail(
     request: Request,
     post_id: int,
     db=Depends(get_db),
@@ -50,7 +51,7 @@ async def post_details(
     print(post_id)
     post, user, *likes = get_post(db, post_id)
     print(likes)
-    return Post(
+    return PostWithLikes(
         id=post.id,
         title=post.title,
         user_id=post.user_id,
@@ -58,24 +59,30 @@ async def post_details(
         source_url=post.source_url,
         content=post.content,
         created=post.created.isoformat(),
-        user=user)
+        user=user,
+        likes=PostLike(
+            plus=likes[0],
+            minus=likes[1],
+            my_rate=get_user_post_rating(db, post.id, current_user.id)
+            )
+        )
 
 
 @r.get(
     "/posts",
-    response_model=t.List[Post],
+    response_model=t.List[PostWithLikes]
 )
 async def posts_details(
     request: Request,
     db=Depends(get_db),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_active_user)
 ):
     """
     Get specyfic post
     """
     posts = get_posts(db)
     print(posts)
-    return [Post(
+    return [PostWithLikes(
         id=post.id,
         title=post.title,
         user_id=post.user_id,
@@ -83,7 +90,13 @@ async def posts_details(
         source_url=post.source_url,
         content=post.content,
         created=post.created.isoformat(),
-        user=user) for post, user, *likes in posts]
+        user=user,
+        likes=PostLike(
+            plus=likes[0],
+            minus=likes[1],
+            my_rate=get_user_post_rating(db, post.id, current_user.id)
+            )
+        ) for post, user, *likes in posts]
 
 
 @r.delete(
@@ -145,7 +158,7 @@ async def post_update(
     image: t.Optional[UploadFile] = File(None),
 ):
     """
-    Get all users
+    Post update
     """
     fields_to_update = {}
     if title:
@@ -158,7 +171,8 @@ async def post_update(
         image_content = await image.read()
         image_name = save_post_image(image.filename, image_content)
         fields_to_update['image_url'] = image_name
-    post, user = update_post(db, fields_to_update, post_id=post_id, user_id=current_user.id)
+    post, user = update_post(db, fields_to_update,
+                             post_id=post_id, user_id=current_user.id)
     return Post(
         id=post.id,
         title=post.title,

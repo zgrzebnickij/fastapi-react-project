@@ -29,6 +29,11 @@ def test_get_post(client, test_post, test_user, user_token_headers):
             'id': test_user.id,
             'first_name': test_user.first_name,
             'last_name': test_user.last_name,
+        },
+        'likes': {
+            'plus': 0,
+            'minus': 0,
+            'my_rate': 0
         }
     }
     print(post)
@@ -56,6 +61,11 @@ def test_get_posts(client, test_post, test_user, test_user_2, test_post_2, user_
                 'id': _test_user.id,
                 'first_name': _test_user.first_name,
                 'last_name': _test_user.last_name,
+            },
+            'likes': {
+                'plus': 0,
+                'minus': 0,
+                'my_rate': 0
             }
         }
         posts.append(post)
